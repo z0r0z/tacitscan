@@ -72,7 +72,7 @@ const ctxFactory=createCtxFactory();
 const ethereumRpc=process.env.ETHEREUM_RPC_URL;
 if(!ethereumRpc) throw new Error('ETHEREUM_RPC_URL is required for canonical cross-out replay');
 // The configured Ethereum RPC first, then public ones, for the same read-only calls: every answer is checked against block hashes.
-const ethereumRpcs=[ethereumRpc,...String(process.env.ETHEREUM_RPC_FALLBACK_URLS??'https://ethereum-rpc.publicnode.com').split(',').map(s=>s.trim()).filter(Boolean)].filter((v,i,a)=>a.indexOf(v)===i);
+const ethereumRpcs=[ethereumRpc,String(process.env.ETHEREUM_RPC_FALLBACK_URLS??'https://ethereum-rpc.publicnode.com')].join(',').split(',').map(s=>s.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
 const ethRpc=async(method,params=[])=>{
   let last=null;
   for(const url of ethereumRpcs) {

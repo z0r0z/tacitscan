@@ -19,13 +19,26 @@ export function decodeEvmLog(log:EvmLog, name:string) {
   }
   catch {return {eventName:'Unknown',args:{topics:log.topics,data:log.data}};}
 }
+// `url` may list several endpoints, comma-separated. A call goes to the one that answered last and moves down the list
+// when it doesn't answer, so one provider throttling this indexer stalls nothing; cursors still move only on answers.
 export function makeRpc(url:string) {
-  return async <T>(method:string,params:unknown[]=[]):Promise<T>=>{
-    const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(20_000)});
+  const urls=url.split(',').map(s=>s.trim()).filter(Boolean);
+  let at=0;
+  const once=async <T>(endpoint:string,method:string,params:unknown[]):Promise<T>=>{
+    const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(20_000)});
     if(!response.ok) throw new Error(`${method}: HTTP ${response.status}`);
     const body=await response.json() as {result?:T;error?:unknown};
     if(body.error || body.result===undefined || body.result===null) throw new Error(`${method}: unavailable result`);
     return body.result;
+  };
+  return async <T>(method:string,params:unknown[]=[]):Promise<T>=>{
+    let last:unknown=new Error(`${method}: no RPC URL`);
+    for(let k=0;k<urls.length;k++) {
+      const i=(at+k)%urls.length;
+      try {const result=await once<T>(urls[i],method,params);at=i;return result;}
+      catch(e) {last=e;}
+    }
+    throw last;
   };
 }
 const hex=(n:number)=>'0x'+n.toString(16);

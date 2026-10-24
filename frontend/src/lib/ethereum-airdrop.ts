@@ -1,4 +1,4 @@
-import { concatHex, createPublicClient, encodeAbiParameters, http, isAddress, keccak256, parseAbi, type Hex } from 'viem';
+import { concatHex, createPublicClient, encodeAbiParameters, fallback, http, isAddress, keccak256, parseAbi, type Hex } from 'viem';
 export const AIRDROP_ADDRESS='0x4b4cb98D0C836c2783Ac46f0078b904dab533AE8' as const;
 export const AIRDROP_ROOT='0x27451b320d5aa9631f7a3fd8adcfa537db8d792dd49aad9ab0951af0c2986a10' as const;
 const PIN='1b2eedde8490801c9ef4406020530059162e6d47';
@@ -38,7 +38,9 @@ export async function ethereumAllocation(raw:string) {
   const rpc=process.env.EVM_RPC_URL_1 || process.env.RPC_ETH;
   if(!rpc) return {...result,chainStatus:'unavailable',message:'Allocation verified; current claim status is unavailable.'};
   try {
-    const client=createPublicClient({transport:http(rpc,{timeout:8000,retryCount:1})});
+    // The variable may list several endpoints, comma-separated, as the indexer reads it.
+    const urls=rpc.split(',').map(s=>s.trim()).filter(Boolean);
+    const client=createPublicClient({transport:fallback(urls.map(u=>http(u,{timeout:8000,retryCount:1})))});
     if(await client.getChainId()!==1) throw new Error('wrong chain');
     const head=await client.getBlock();const blockNumber=head.number;
     const [root,claimed,paused,deadline]=await Promise.all([
