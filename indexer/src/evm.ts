@@ -35,7 +35,7 @@ export function makeRpc(url:string) {
     let last:unknown=new Error(`${method}: no RPC URL`);
     for(let k=0;k<urls.length;k++) {
       const i=(at+k)%urls.length;
-      try {const result=await once<T>(urls[i],method,params);at=i;return result;}
+      try {const result=await once<T>(urls[i]!,method,params);at=i;return result;}
       catch(e) {last=e;}
     }
     throw last;
